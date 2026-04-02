@@ -7,7 +7,7 @@ contract EnergyTrading {
     struct Prosumer {
         // ID (address) of the prosumer
         address prosumerAddress;
-        // positive value means energy to sell, negative value means energy to buy
+        // Positive value means energy to sell, negative value means energy to buy
         int256 prosumerEnergyStat;
         // Store the deposited ethers, we don't expect negative
         uint256 prosumerBalance;
@@ -24,7 +24,7 @@ contract EnergyTrading {
     // Variable to store the recorder address who can update the energy status of prosumers
     address private recorder;
 
-    // event to emit when coordination is complete
+    // Event to emit when coordination is complete
     event CoordinationComplete(uint256 totalMatchedEnergy);
 
     constructor(address _recorder) payable {
@@ -58,25 +58,25 @@ contract EnergyTrading {
     }
     function deposit() external payable {
         require(prosumers[msg.sender].isMember, "Not registered.");
-        // deposit the balance with the ether sent (msg.value)
+        // Deposit the balance with the ether sent (msg.value)
         prosumers[msg.sender].prosumerBalance += msg.value;
     }
 
     function withdraw(uint256 _value) external {
-        // check if registration
+        // Check if registration
         require(prosumers[msg.sender].isMember, "Not registered.");
         
-        // check since "can only withdraw if they have no energy deficit")
+        // Check since "can only withdraw if they have no energy deficit")
         require(prosumers[msg.sender].prosumerEnergyStat >= 0, "Cannot withdraw while in energy deficit.");
         
-        // check if they actually have enough balance
+        // Check if they actually have enough balance
         require(prosumers[msg.sender].prosumerBalance >= _value, "Insufficient balance.");
 
-        // update balance beofre the transfer
+        // Update balance beofre the transfer
         prosumers[msg.sender].prosumerBalance -= _value;
 
-        // send the Ether back to the prosumer
-        //using transfer since it will revert back if there is an error
+        // Send the Ether back to the prosumer
+        // Using transfer since it will revert back if there is an error
         payable(msg.sender).transfer(_value);
     }
 
@@ -86,10 +86,10 @@ contract EnergyTrading {
         require(msg.sender == getRecorder(), "Only the recorder is valid.");
         require(prosumers[_prosumer].isMember, "Target prosumer not registered.");
 
-        // update global status: Subtract old value, add new value
+        // Update global status: Subtract old value, add new value
         totalCommunityStatus = totalCommunityStatus - prosumers[_prosumer].prosumerEnergyStat + deltaEnergy;
         
-        // update individual status
+        // Update individual status
         prosumers[_prosumer].prosumerEnergyStat = deltaEnergy;
     }
 
@@ -108,27 +108,27 @@ contract EnergyTrading {
     }
 
     function buyEnergyFrom(address _seller, uint _requestedEnergy) external {
-        // template-safe registration checks
+        // Template-safe registration checks
         require(prosumers[msg.sender].isMember, "Buyer not registered.");
         require(prosumers[_seller].isMember, "Seller not registered.");
         require(_requestedEnergy > 0, "Requested energy must be positive.");
         
-        // energy Status Logic
-        // buyer must be in deficit (negative)
+        // Energy Status Logic
+        // Buyer must be in deficit (negative)
         require(prosumers[msg.sender].prosumerEnergyStat < 0, "The buyer must have an energy deficit.");
-        // buyer cannot buy more than their absolute deficit
+        // Buyer cannot buy more than their absolute deficit
         require(-prosumers[msg.sender].prosumerEnergyStat >= int256(_requestedEnergy), "The buyer cannot request more energy than they currently need.");
         
-        // seller must be in surplus
+        // Seller must be in surplus
         require(prosumers[_seller].prosumerEnergyStat > 0, "The seller must have a surplus.");
-        // seller cannot sell more than they actually have
+        // Seller cannot sell more than they actually have
         require(prosumers[_seller].prosumerEnergyStat >= int256(_requestedEnergy), "The seller must have the same or more energy than they are selling.");
 
-        // financial Logic
+        // Financial Logic
         uint256 cost = _requestedEnergy * getEnergyPrice();
         require(prosumers[msg.sender].prosumerBalance >= cost, "The buyer must have enough balance to pay for the energy.");
 
-        // update State
+        // Update State
         // Energy
         prosumers[msg.sender].prosumerEnergyStat += int256(_requestedEnergy);
         prosumers[_seller].prosumerEnergyStat -= int256(_requestedEnergy);
@@ -143,7 +143,7 @@ contract EnergyTrading {
         require(prosumers[_buyer].isMember, "Buyer not registered.");
         require(_offeredEnergy > 0, "Offered energy must be positive.");
 
-        // logic Checks
+        // Logic Checks
         require(prosumers[msg.sender].prosumerEnergyStat > 0, "The seller must have a surplus of energy.");
         require(prosumers[msg.sender].prosumerEnergyStat >= int256(_offeredEnergy), "The seller must have the same or more energy than they are selling.");
 
@@ -163,7 +163,7 @@ contract EnergyTrading {
         prosumers[msg.sender].prosumerBalance += cost;
     }
 
-    //few added dfunction for 8th point
+    // Added dfunction for 8th point
     function isSeller(address _prosumer) internal view returns (bool) {
         return prosumers[_prosumer].prosumerEnergyStat > 0;
     }
@@ -180,17 +180,17 @@ contract EnergyTrading {
         uint256 totalMatched = 0;
         uint256 currentPrice = getEnergyPrice();
 
-        // loop through all prosumers to find buyers (those in deficit)
+        // Loop through all prosumers to find buyers (those in deficit)
         for (uint256 i = 0; i < prosumerAddresses.length; i++) {
             address buyer = prosumerAddresses[i];
             
             if (isBuyer(buyer)) {
-                // for every buyer, look for sellers (those in surplus)
+                // For every buyer, look for sellers (those in surplus)
                 for (uint256 j = 0; j < prosumerAddresses.length; j++) {
                     address seller = prosumerAddresses[j];
                     
                     if (isSeller(seller)) {
-                        // determine how much can be traded
+                        // Determine how much can be traded
                         uint256 buyerNeeds = getAbsStatus(prosumers[buyer].prosumerEnergyStat);
                         uint256 sellerHas = uint256(prosumers[seller].prosumerEnergyStat);
                         
